@@ -11,7 +11,7 @@ const Index = () => {
   const { address, isConnected, connect } = useWallet();
 
   return (
-    <div className="min-h-screen bg-[#1e1f1e] w-96">
+    <div className="min-h-screen bg-[#1e1f1e] w-96 relative ">
       <Navbar />
 
       <div className="mx-auto px-4">
@@ -80,7 +80,6 @@ const Index = () => {
         )}
       </div>
 
-      {/* Bottombar */}
       <Bottombar />
     </div>
   );
