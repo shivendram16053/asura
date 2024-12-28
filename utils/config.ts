@@ -1,5 +1,3 @@
-'use client';
-
 import { http, createConfig } from 'wagmi'
 import { mainnet, bsc } from 'wagmi/chains'
 import { injected, metaMask, walletConnect } from 'wagmi/connectors'
@@ -9,7 +7,7 @@ export const config = createConfig({
   connectors: [
     injected(),
     metaMask(),
-    walletConnect({ projectId: 'YOUR_WALLET_CONNECT_PROJECT_ID' }),
+    walletConnect({ projectId: 'a1970e69f049bbfc7dec9ed0b818a703' }),
   ],
   transports: {
     [bsc.id]: http(),

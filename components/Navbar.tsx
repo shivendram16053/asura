@@ -1,10 +1,11 @@
-'use client';
+"use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Button } from "./ui/button";
 import { Pacifico } from "next/font/google";
 import { useWallet } from "@/context/useWallet";
 import { Loader2 } from "lucide-react";
+import Link from "next/link";
 
 const pacifico = Pacifico({
   weight: "400",
@@ -12,9 +13,9 @@ const pacifico = Pacifico({
 });
 
 const Navbar = () => {
-  const { address, connect, disconnect} = useWallet();
+  const { address, connect, disconnectFunc } = useWallet();
   const [showDialog, setShowDialog] = useState(false);
-  
+
   const copyAddressToClipboard = () => {
     if (address) {
       navigator.clipboard.writeText(address);
@@ -23,32 +24,43 @@ const Navbar = () => {
   };
 
   const handleDisconnect = async () => {
-    await disconnect();
-    setShowDialog(false);
+    try {
+      await disconnectFunc();
+      setShowDialog(false);
+      console.log("Disconnected successfully.");
+    } catch (err) {
+      console.error("Failed to disconnect:", err);
+    }
   };
 
   const handleConnect = async () => {
-    await connect();
+    try {
+      await connect();
+    } catch (err) {
+      console.error("Failed to connect:", err);
+    }
   };
 
   // Click outside to close dialog
-  React.useEffect(() => {
+  useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (showDialog && !(event.target as Element).closest('.wallet-menu')) {
+      if (showDialog && !(event.target as Element).closest(".wallet-menu")) {
         setShowDialog(false);
       }
     };
 
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [showDialog]);
 
   return (
     <div className="sticky top-0 z-50 bg-stone-800 text-white shadow-lg backdrop-blur-lg bg-opacity-90">
-      <div className="container mx-auto px-4 flex justify-between items-center h-16">
-        <h1 className={`text-4xl font-bold ${pacifico.className}`}>aSura</h1>
+      <div className="container px-4 h-16 flex justify-between items-center">
+        <Link href="/">
+          <h1 className={`text-4xl font-bold ${pacifico.className}`}>aSura</h1>
+        </Link>
         {address ? (
-          <div className="relative wallet-menu">
+          <div>
             <Button
               onClick={() => setShowDialog(!showDialog)}
               variant="outline"
@@ -56,28 +68,11 @@ const Navbar = () => {
             >
               {address.slice(0, 6)}...{address.slice(-4)}
             </Button>
+
             {showDialog && (
-              <div className="absolute top-12 right-0 bg-white rounded-lg shadow-lg p-3 text-sm min-w-[160px]">
-                <ul className="space-y-2">
-                  <li>
-                    <Button
-                      onClick={copyAddressToClipboard}
-                      variant="ghost"
-                      className="w-full justify-start"
-                    >
-                      Copy Address
-                    </Button>
-                  </li>
-                  <li>
-                    <Button
-                      onClick={handleDisconnect}
-                      variant="destructive"
-                      className="w-full justify-start"
-                    >
-                      Disconnect
-                    </Button>
-                  </li>
-                </ul>
+              <div className="wallet-menu bg-white text-black p-4 absolute right-4 mt-[-10px]  gap-2 w-32  flex flex-col rounded">
+                <Button onClick={copyAddressToClipboard}>Copy Address</Button>
+                <Button onClick={handleDisconnect}>Disconnect</Button>
               </div>
             )}
           </div>
@@ -85,10 +80,9 @@ const Navbar = () => {
           <Button
             onClick={handleConnect}
             variant="outline"
-            className="bg-white text-black hover:bg-gray-200"
+            className="bg-white text-black"
           >
-            
-              'Connect Wallet'
+            Connect Wallet
           </Button>
         )}
       </div>
