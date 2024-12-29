@@ -1,10 +1,7 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
-
-contract BattleContract is ERC721URIStorage, Ownable {
+contract Asura {
     struct Battle {
         string title;
         string description;
@@ -12,109 +9,107 @@ contract BattleContract is ERC721URIStorage, Ownable {
         uint256 endTime;
         uint256 fee;
         address[] voters;
-        mapping(address => bool) hasVoted;
+        mapping(address => uint256) userVotes; // Tracks which side the user voted for
+        uint256[2] voteCount; // voteCount[0] = votes for song 1, voteCount[1] = votes for song 2
         uint256 winningSide; // 0 = no winner, 1 = song 1 wins, 2 = song 2 wins
+        bool winnerDeclared;
     }
 
-    uint256 public battleIdCounter;
-    uint256 public nftIdCounter;
     mapping(uint256 => Battle) public battles;
-    uint256 public poolBalance;
+    uint256 public battleCounter;
 
-    event BattleCreated(uint256 battleId, string title, uint256 endTime);
-    event Voted(uint256 battleId, address voter);
-    event RewardClaimed(uint256 battleId, address claimer, uint256 amount);
+    // Events
+    event BattleCreated(uint256 battleId, string title, string[2] songs, uint256 endTime);
+    event Voted(uint256 battleId, address voter, uint256 songChoice);
+    event WinnerDeclared(uint256 battleId, uint256 winningSide);
+    event RewardClaimed(uint256 battleId, address claimer);
 
-    constructor() ERC721("VotingNFT", "VOTE") {}
-
+    // Create a new battle
     function createBattle(
         string memory _title,
         string memory _description,
         string[2] memory _songs,
-        uint256 _timeframe,
         uint256 _fee
-    ) external payable {
-        require(msg.value >= _fee, "Insufficient fee for the pool");
-
-        uint256 battleId = battleIdCounter++;
-        Battle storage newBattle = battles[battleId];
-
+    ) external {
+        uint256 _endTime = block.timestamp + 24 * 60 * 60;
+        require(_endTime > block.timestamp, "End time must be in the future");
+    
+        Battle storage newBattle = battles[battleCounter];
         newBattle.title = _title;
         newBattle.description = _description;
         newBattle.songs = _songs;
-        newBattle.endTime = block.timestamp + _timeframe;
+        newBattle.endTime = _endTime;
         newBattle.fee = _fee;
-
-        poolBalance += msg.value;
-
-        emit BattleCreated(battleId, _title, newBattle.endTime);
+    
+        emit BattleCreated(battleCounter, _title, _songs, _endTime);
+        battleCounter++;
     }
 
-    function vote(uint256 _battleId, uint256 _songChoice, string memory _metadataURI) external {
+    // Vote for a song
+    function vote(uint256 _battleId, uint256 _songChoice) external payable {
         Battle storage battle = battles[_battleId];
         require(block.timestamp < battle.endTime, "Battle has ended");
-        require(!battle.hasVoted[msg.sender], "Already voted");
         require(_songChoice == 1 || _songChoice == 2, "Invalid song choice");
+        require(battle.userVotes[msg.sender] == 0, "You have already voted");
+        require(msg.value == battle.fee, "Incorrect fee sent");
 
+        battle.userVotes[msg.sender] = _songChoice;
+        battle.voteCount[_songChoice - 1]++;
         battle.voters.push(msg.sender);
-        battle.hasVoted[msg.sender] = true;
 
-        // Mint NFT as a reward
-        uint256 nftId = nftIdCounter++;
-        _mint(msg.sender, nftId);
-        _setTokenURI(nftId, _metadataURI);
-
-        // Track which song was chosen
-        // 1 = song 1, 2 = song 2
-        if (_songChoice == 1) {
-            battle.winningSide = 1; // Song 1 is winning
-        } else if (_songChoice == 2) {
-            battle.winningSide = 2; // Song 2 is winning
-        }
-
-        emit Voted(_battleId, msg.sender);
+        emit Voted(_battleId, msg.sender, _songChoice);
     }
 
-    function endBattle(uint256 _battleId, uint256 _winningSide) external onlyOwner {
+    // Declare the winner of the battle
+    function declareWinner(uint256 _battleId) external {
         Battle storage battle = battles[_battleId];
         require(block.timestamp > battle.endTime, "Battle is still ongoing");
-        require(battle.winningSide == 0, "Battle already has a winner");
-        require(_winningSide == 1 || _winningSide == 2, "Invalid winning side");
+        require(!battle.winnerDeclared, "Winner already declared");
 
-        battle.winningSide = _winningSide;
+        if (battle.voteCount[0] > battle.voteCount[1]) {
+            battle.winningSide = 1; // Song 1 wins
+        } else if (battle.voteCount[1] > battle.voteCount[0]) {
+            battle.winningSide = 2; // Song 2 wins
+        } else {
+            battle.winningSide = 0; // Draw
+        }
+
+        battle.winnerDeclared = true;
+
+        emit WinnerDeclared(_battleId, battle.winningSide);
     }
 
+    // Claim reward for voting for the winning side
     function claimReward(uint256 _battleId) external {
         Battle storage battle = battles[_battleId];
-        require(block.timestamp > battle.endTime, "Battle is still ongoing");
-        require(battle.hasVoted[msg.sender], "You did not participate");
+        require(battle.winnerDeclared, "Winner not declared yet");
+        require(battle.userVotes[msg.sender] == battle.winningSide, "You did not vote for the winning side");
 
-        uint256 reward = poolBalance / battle.voters.length;
+        battle.userVotes[msg.sender] = 0; // Mark reward as claimed to prevent double claiming
 
-        // Ensure the user holds the NFT of the winning side
-        bool hasWinningNFT = false;
-        if (battle.winningSide == 1) {
-            for (uint256 i = 0; i < balanceOf(msg.sender); i++) {
-                uint256 tokenId = tokenOfOwnerByIndex(msg.sender, i);
-                if (getTokenURI(tokenId) == battle.songs[0]) {
-                    hasWinningNFT = true;
-                    break;
-                }
-            }
-        } else if (battle.winningSide == 2) {
-            for (uint256 i = 0; i < balanceOf(msg.sender); i++) {
-                uint256 tokenId = tokenOfOwnerByIndex(msg.sender, i);
-                if (getTokenURI(tokenId) == battle.songs[1]) {
-                    hasWinningNFT = true;
-                    break;
-                }
-            }
-        }
+        emit RewardClaimed(_battleId, msg.sender);
+        // Logic for transferring rewards, such as tokens or native currency
+    }
 
-        require(hasWinningNFT, "You do not hold the winning NFT");
-
-        payable(msg.sender).transfer(reward);
-
-        emit RewardClaimed(_battleId, msg.sender, reward);
+    // Fetch battle details for frontend
+    function getBattleDetails(uint256 _battleId) external view returns (
+        string memory title,
+        string memory description,
+        string[2] memory songs,
+        uint256 endTime,
+        uint256 fee,
+        uint256[2] memory voteCount,
+        uint256 winningSide,
+        bool winnerDeclared
+    ) {
+        Battle storage battle = battles[_battleId];
+        title = battle.title;
+        description = battle.description;
+        songs = battle.songs;
+        endTime = battle.endTime;
+        fee = battle.fee;
+        voteCount = battle.voteCount;
+        winningSide = battle.winningSide;
+        winnerDeclared = battle.winnerDeclared;
     }
 }

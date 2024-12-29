@@ -3,8 +3,10 @@
 import Bottombar from "@/components/Bottombar";
 import Navbar from "@/components/Navbar";
 import { useWallet } from "@/context/useWallet";
+import { ethers } from "ethers";
 import { useRouter } from "next/navigation";
 import React, { useEffect, useState } from "react";
+import battleContractABI from "../contracts/artifacts/contracts/asura.sol/Asura.json";
 
 // Song type definition
 interface Song {
@@ -18,10 +20,15 @@ const CreateBattle = () => {
   const router = useRouter();
   const [battleTitle, setBattleTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [songs, setSongs] = useState(["", ""]); // Two fixed inputs for songs
+  const [fees, setFees] = useState<number>(0);
+  const [songs, setSongs] = useState(["", ""]);
   const [query, setQuery] = useState("");
-  const [suggestions, setSuggestions] = useState<Song[]>([]); // Added proper typing
-  const [activeInput, setActiveInput] = useState<number | null>(null); // Track which input is active
+  const [suggestions, setSuggestions] = useState<Song[]>([]);
+  const [activeInput, setActiveInput] = useState<number | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [shareableLink, setShareableLink] = useState<string | null>(null);
+
+  
 
   useEffect(() => {
     if (!isConnected) {
@@ -67,31 +74,56 @@ const CreateBattle = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    const battleData = {
-      title: battleTitle,
-      description,
-      songs,
-    };
-
     try {
+      setIsSubmitting(true);
+  
+      if (!window.ethereum) {
+        throw new Error("Please install MetaMask!");
+      }
+  
+      const provider = new ethers.providers.Web3Provider(window.ethereum as any);
+      const signer = provider.getSigner();
+  
+      const contract = new ethers.Contract(
+        "0x02E33F39cF525A7F101F8132535BA2f2Ae725F1E", // Replace with your contract address
+        battleContractABI.abi,
+        signer
+      );
+  
+      // Convert fees from BNB to Wei
+      const feesInWei = ethers.utils.parseEther(fees.toString());
+  
+      const tx = await contract.createBattle(battleTitle, description, songs, feesInWei);
+      const receipt = await tx.wait();
+  
+      console.log("Transaction confirmed:", receipt);
+  
       const response = await fetch("/api/battles", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(battleData),
+        body: JSON.stringify({
+          title: battleTitle,
+          description,
+          songs,
+          creator: await signer.getAddress(),
+          transactionHash: receipt.transactionHash,
+        }),
       });
-
+  
       if (response.ok) {
-        console.log("Battle created successfully");
-        router.push("/battles"); // Redirect to battles page
+        const data = await response.json();
+        setShareableLink(data.link);
       } else {
-        console.error("Error creating battle");
+        console.error("Failed to save metadata");
       }
     } catch (error) {
-      console.error("Error submitting battle:", error);
+      console.error("Error creating battle on-chain:", error);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
+  
   return (
     <div className="min-h-screen bg-[#1e1f1e] w-96 relative">
       <Navbar />
@@ -142,7 +174,7 @@ const CreateBattle = () => {
                 required
               />
               {query && activeInput === index && (
-                <ul className=" bg-white rounded mt-2 absolute w-full z-10 max-h-48 overflow-y-auto">
+                <ul className="bg-white rounded mt-2 absolute w-full z-10 max-h-48 overflow-y-auto">
                   {suggestions.map((song) => (
                     <li
                       key={song.id}
@@ -158,16 +190,37 @@ const CreateBattle = () => {
           ))}
         </div>
 
+        <div>
+          <label htmlFor="title" className="block text-white mb-2">
+            Fees (In BNB)
+          </label>
+          <input
+            id="fees"
+            type="number"
+            value={fees}
+            onChange={(e) => setFees(Number(e.target.value))}
+            className="w-full px-4 py-2 rounded bg-black outline-none shadow-sm shadow-white text-white"
+            placeholder="Set Voting fees"
+            required
+          />
+        </div>
+
         {/* Submit Button */}
         <div className="text-center">
           <button
             type="submit"
             className="bg-white text-black px-6 py-2 rounded hover:bg-slate-300 transition-colors"
+            disabled={isSubmitting}
           >
-            Create Battle
+            {isSubmitting ? "Submitting..." : "Create Battle"}
           </button>
         </div>
       </form>
+      {shareableLink && (
+        <div className="text-center text-white mt-4">
+          Shareable Link: <a href={shareableLink}>{shareableLink}</a>
+        </div>
+      )}
       <Bottombar />
     </div>
   );

@@ -1,0 +1,29 @@
+# Node.js dependencies
+node_modules/
+
+# Hardhat-specific files
+artifacts/
+cache/
+coverage/
+typechain/
+typechain-types/
+
+# Logs
+*.log
+yarn-debug.log*
+yarn-error.log*
+
+# Environment variables
+.env
+
+# Hardhat configuration
+hardhat.config.ts
+hardhat.config.js
+
+# Editor-specific files
+.vscode/
+.idea/
+.DS_Store
+
+# Optional: OS-specific files
+Thumbs.db
