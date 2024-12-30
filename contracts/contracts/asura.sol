@@ -1,22 +1,25 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.20;
 
 contract Asura {
     struct Battle {
+        uint256 id;
         string title;
         string description;
         string[2] songs;
+        string[2] artists;
         uint256 endTime;
         uint256 fee;
         address[] voters;
-        mapping(address => uint256) userVotes; // Tracks which side the user voted for
         uint256[2] voteCount; // voteCount[0] = votes for song 1, voteCount[1] = votes for song 2
         uint256 winningSide; // 0 = no winner, 1 = song 1 wins, 2 = song 2 wins
         bool winnerDeclared;
+        uint256 prizePool;
+        mapping(address => bool) hasClaimedReward; // Tracks reward claims
     }
 
     mapping(uint256 => Battle) public battles;
-    uint256 public battleCounter;
+    uint256 public battleCount;
 
     // Events
     event BattleCreated(uint256 battleId, string title, string[2] songs, uint256 endTime);
@@ -29,20 +32,23 @@ contract Asura {
         string memory _title,
         string memory _description,
         string[2] memory _songs,
+        string[2] memory _artists,
         uint256 _fee
     ) external {
         uint256 _endTime = block.timestamp + 24 * 60 * 60;
-        require(_endTime > block.timestamp, "End time must be in the future");
-    
-        Battle storage newBattle = battles[battleCounter];
+
+        Battle storage newBattle = battles[battleCount];
+        newBattle.id = battleCount;
         newBattle.title = _title;
         newBattle.description = _description;
         newBattle.songs = _songs;
+        newBattle.artists = _artists;
         newBattle.endTime = _endTime;
         newBattle.fee = _fee;
-    
-        emit BattleCreated(battleCounter, _title, _songs, _endTime);
-        battleCounter++;
+
+        emit BattleCreated(battleCount, _title, _songs, _endTime);
+
+        battleCount++;
     }
 
     // Vote for a song
@@ -50,12 +56,11 @@ contract Asura {
         Battle storage battle = battles[_battleId];
         require(block.timestamp < battle.endTime, "Battle has ended");
         require(_songChoice == 1 || _songChoice == 2, "Invalid song choice");
-        require(battle.userVotes[msg.sender] == 0, "You have already voted");
         require(msg.value == battle.fee, "Incorrect fee sent");
 
-        battle.userVotes[msg.sender] = _songChoice;
-        battle.voteCount[_songChoice - 1]++;
         battle.voters.push(msg.sender);
+        battle.voteCount[_songChoice - 1]++;
+        battle.prizePool += msg.value;
 
         emit Voted(_battleId, msg.sender, _songChoice);
     }
@@ -79,37 +84,80 @@ contract Asura {
         emit WinnerDeclared(_battleId, battle.winningSide);
     }
 
-    // Claim reward for voting for the winning side
+    // Claim reward for winning
     function claimReward(uint256 _battleId) external {
         Battle storage battle = battles[_battleId];
         require(battle.winnerDeclared, "Winner not declared yet");
-        require(battle.userVotes[msg.sender] == battle.winningSide, "You did not vote for the winning side");
+        require(battle.winningSide != 0, "No winner in this battle");
+        require(!battle.hasClaimedReward[msg.sender], "Reward already claimed");
 
-        battle.userVotes[msg.sender] = 0; // Mark reward as claimed to prevent double claiming
+        uint256 rewardAmount = battle.prizePool / battle.voteCount[battle.winningSide - 1];
+        battle.hasClaimedReward[msg.sender] = true;
+
+        payable(msg.sender).transfer(rewardAmount);
 
         emit RewardClaimed(_battleId, msg.sender);
-        // Logic for transferring rewards, such as tokens or native currency
     }
 
-    // Fetch battle details for frontend
-    function getBattleDetails(uint256 _battleId) external view returns (
-        string memory title,
-        string memory description,
-        string[2] memory songs,
-        uint256 endTime,
-        uint256 fee,
-        uint256[2] memory voteCount,
-        uint256 winningSide,
-        bool winnerDeclared
-    ) {
+    // Fetch all active battles
+    function getActiveBattles() external view returns (uint256[] memory) {
+        uint256[] memory activeBattleIds = new uint256[](battleCount);
+        uint256 count = 0;
+
+        for (uint256 i = 0; i < battleCount; i++) {
+            if (block.timestamp < battles[i].endTime) {
+                activeBattleIds[count] = i;
+                count++;
+            }
+        }
+
+        return activeBattleIds;
+    }
+
+    // Fetch all ended battles
+    function getEndedBattles() external view returns (uint256[] memory) {
+        uint256[] memory endedBattleIds = new uint256[](battleCount);
+        uint256 count = 0;
+
+        for (uint256 i = 0; i < battleCount; i++) {
+            if (block.timestamp >= battles[i].endTime) {
+                endedBattleIds[count] = i;
+                count++;
+            }
+        }
+
+        return endedBattleIds;
+    }
+
+    // Fetch battle details by ID
+    function getBattleDetails(uint256 _battleId)
+        external
+        view
+        returns (
+            string memory title,
+            string memory description,
+            string[2] memory songs,
+            string[2] memory artists,
+            uint256 endTime,
+            uint256 fee,
+            uint256[2] memory voteCount,
+            uint256 winningSide,
+            uint256 prizePool,
+            bool winnerDeclared
+        )
+    {
         Battle storage battle = battles[_battleId];
-        title = battle.title;
-        description = battle.description;
-        songs = battle.songs;
-        endTime = battle.endTime;
-        fee = battle.fee;
-        voteCount = battle.voteCount;
-        winningSide = battle.winningSide;
-        winnerDeclared = battle.winnerDeclared;
+        return (
+            battle.title,
+            battle.description,
+            battle.songs,
+            battle.artists,
+            battle.endTime,
+            battle.fee,
+            battle.voteCount,
+            battle.winningSide,
+            battle.prizePool,
+            battle.winnerDeclared
+        );
     }
 }

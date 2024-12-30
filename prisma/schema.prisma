@@ -1,14 +1,25 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider = "mongodb"
+  url      = env("DATABASE_URL") // Your MongoDB connection string
+}
+
+model Battle {
+  id           String        @id @default(auto()) @map("_id") @db.ObjectId
+  name         String
+  status       String        // e.g., Live, Ended
+  participants Participant[] @relation(fields: [], references: [])
+}
+
+model Participant {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  image      String
+  songName   String
+  artistName String
+  votes      Int      @default(0)
+  battleId   String   @db.ObjectId
+  battle     Battle   @relation(fields: [battleId], references: [id])
 }
