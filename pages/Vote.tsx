@@ -1,6 +1,13 @@
+"use client";
+
 import React, { useEffect, useState } from "react";
 import { getWeb3, getContract } from "../utils/web3";
 import BattleCard from "../components/BattleCard";
+import Navbar from "@/components/Navbar";
+import Bottombar from "@/components/Bottombar";
+import { useWallet } from "@/context/useWallet";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 interface Battle {
   id: number;
@@ -13,26 +20,30 @@ interface Battle {
 }
 
 const VotePage: React.FC = () => {
+  const { isConnected } = useWallet();
+  const router = useRouter();
   const [activeBattles, setActiveBattles] = useState<Battle[]>([]);
   const [endedBattles, setEndedBattles] = useState<Battle[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+
+  useEffect(() => {
+    if (!isConnected) {
+      router.push("/");
+    }
+  }, [isConnected, router]);
 
   useEffect(() => {
     const fetchBattles = async () => {
       try {
         const web3 = getWeb3();
         const contract = getContract(web3);
-        const accounts = await web3.eth.getAccounts();
 
-        // Fetch active and ended battle IDs
         const activeBattleIds = (await contract.methods.getActiveBattles().call()) || [];
         const endedBattleIds = (await contract.methods.getEndedBattles().call()) || [];
-
-        // Fetch details for active battles
-        const activeBattlePromises = (activeBattleIds as number[]).map((id: number) =>
+        const activeBattlePromises = activeBattleIds.map((id: number) =>
           contract.methods.getBattleDetails(id).call()
         );
-        const endedBattlePromises = (endedBattleIds as number[]).map((id: number) =>
+        const endedBattlePromises = endedBattleIds.map((id: number) =>
           contract.methods.getBattleDetails(id).call()
         );
 
@@ -73,38 +84,20 @@ const VotePage: React.FC = () => {
     fetchBattles();
   }, []);
 
-  const handleVote = async (battleId: number, songIndex: number) => {
-    try {
-      const web3 = getWeb3();
-      const contract = getContract(web3);
-      const accounts = await web3.eth.getAccounts();
-
-      await contract.methods.vote(battleId, songIndex + 1).send({
-        from: accounts[0],
-        value: web3.utils.toWei("0.01", "ether"), // Replace with the fee required
-      });
-
-      alert("Vote submitted successfully!");
-    } catch (error) {
-      console.error("Error voting:", error);
-      alert("Error submitting vote.");
-    }
-  };
-
   if (loading) return <p>Loading battles...</p>;
 
   return (
-    <div>
-      <h1>Vote for Battles</h1>
+    <div className="min-h-screen bg-[#1e1f1e] w-96 relative">
+      <Navbar />
+      <h1 className="text-white text-center mt-4 bold text-2xl">Vote For Battles</h1>
       <section>
         <h2>Active Battles</h2>
         {activeBattles.map((battle) => (
-          <BattleCard
-            key={battle.id}
-            {...battle}
-            isEnded={false}
-            onVote={handleVote}
-          />
+          <Link key={battle.id} href={`/vote/${battle.id}`}>
+            
+              <BattleCard {...battle} isEnded={false} />
+            
+          </Link>
         ))}
       </section>
       <section>
@@ -113,6 +106,7 @@ const VotePage: React.FC = () => {
           <BattleCard key={battle.id} {...battle} isEnded={true} />
         ))}
       </section>
+      <Bottombar />
     </div>
   );
 };

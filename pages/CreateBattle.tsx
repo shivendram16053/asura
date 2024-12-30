@@ -22,6 +22,7 @@ const CreateBattle = () => {
   const [description, setDescription] = useState("");
   const [fees, setFees] = useState<number>(0);
   const [songs, setSongs] = useState(["", ""]);
+  const [artists, setArtists] = useState<string[]>(["", ""]);
   const [query, setQuery] = useState("");
   const [suggestions, setSuggestions] = useState<Song[]>([]);
   const [activeInput, setActiveInput] = useState<number | null>(null);
@@ -66,11 +67,16 @@ const CreateBattle = () => {
     const updatedSongs = [...songs];
     updatedSongs[index] = `${song.name} by ${song.artists[0]?.name}`;
     setSongs(updatedSongs);
-
+  
+    const updatedArtists = [...artists];
+    updatedArtists[index] = song.artists[0]?.name;
+    setArtists(updatedArtists);
+  
     setQuery("");
     setSuggestions([]);
     setActiveInput(null);
   };
+  
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -85,7 +91,7 @@ const CreateBattle = () => {
       const signer = provider.getSigner();
   
       const contract = new ethers.Contract(
-        "0x02E33F39cF525A7F101F8132535BA2f2Ae725F1E", // Replace with your contract address
+        "0x9c1321d4D075B966A0b95404E15c8DE0d6e6aA29",
         battleContractABI.abi,
         signer
       );
@@ -93,29 +99,15 @@ const CreateBattle = () => {
       // Convert fees from BNB to Wei
       const feesInWei = ethers.utils.parseEther(fees.toString());
   
-      const tx = await contract.createBattle(battleTitle, description, songs, feesInWei);
+      const tx = await contract.createBattle(battleTitle, description, songs, artists, feesInWei);
       const receipt = await tx.wait();
   
       console.log("Transaction confirmed:", receipt);
   
-      const response = await fetch("/api/battles", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title: battleTitle,
-          description,
-          songs,
-          creator: await signer.getAddress(),
-          transactionHash: receipt.transactionHash,
-        }),
-      });
+      const battleId = receipt.events[0].args[0].toNumber();
   
-      if (response.ok) {
-        const data = await response.json();
-        setShareableLink(data.link);
-      } else {
-        console.error("Failed to save metadata");
-      }
+      const shareableLink = `https://asura-app.vercel.app/battle/${battleId}`;
+      setShareableLink(shareableLink);
     } catch (error) {
       console.error("Error creating battle on-chain:", error);
     } finally {

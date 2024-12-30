@@ -2,7 +2,7 @@ import Web3 from "web3";
 import { AbiItem } from "web3-utils";
 import contractABI from "../contracts/artifacts/contracts/asura.sol/Asura.json";
 
-const CONTRACT_ADDRESS = "your_contract_address_here";
+const CONTRACT_ADDRESS = "0x9c1321d4D075B966A0b95404E15c8DE0d6e6aA29";
 
 export const getWeb3 = () => {
   if (typeof window !== "undefined" && (window as any).ethereum) {
@@ -13,5 +13,6 @@ export const getWeb3 = () => {
 };
 
 export const getContract = (web3: Web3) => {
-  return new web3.eth.Contract(contractABI as unknown as AbiItem[], CONTRACT_ADDRESS);
+  const abi = contractABI.abi;
+  return new web3.eth.Contract(abi as AbiItem[], CONTRACT_ADDRESS);
 };

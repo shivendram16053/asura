@@ -2,18 +2,14 @@ import { HardhatUserConfig } from "hardhat/config";
 import "@nomiclabs/hardhat-ethers";
 import dotenv from "dotenv";
 
-dotenv.config()
-
-if (!process.env.PRIVATE_KEY) {
-  throw new Error("Missing PRIVATE_KEY environment variable");
-}
+dotenv.config();
 
 const config: HardhatUserConfig = {
-  solidity: "0.8.20",
+  solidity: "0.8.0",
   networks: {
     bscTestnet: {
-      url: `https://data-seed-prebsc-1-s1.binance.org:8545/`,
-      accounts: [process.env.PRIVATE_KEY],
+      url: "https://data-seed-prebsc-1-s1.binance.org:8545", // BSC testnet RPC URL
+      accounts: [process.env.PRIVATE_KEY || ""] // Load private key from .env
     },
   },
 };
