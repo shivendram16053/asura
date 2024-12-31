@@ -1,3 +1,4 @@
+// Voting Page Component
 "use client";
 
 import React, { useEffect, useState } from "react";
@@ -18,7 +19,9 @@ interface BattleDetails {
 const BattleDetailsPage = () => {
   const params = useParams();
   const battleId = params?.battleId as string;
-  const [battleDetails, setBattleDetails] = useState<BattleDetails | null>(null);
+  const [battleDetails, setBattleDetails] = useState<BattleDetails | null>(
+    null
+  );
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -34,7 +37,9 @@ const BattleDetailsPage = () => {
         const web3 = getWeb3();
         const contract = getContract(web3);
 
-        const details = (await contract.methods.getBattleDetails(battleId).call()) as {
+        const details = (await contract.methods
+          .getBattleDetails(battleId)
+          .call()) as {
           title: string;
           description: string;
           songs: string[];
@@ -72,7 +77,9 @@ const BattleDetailsPage = () => {
         throw new Error("No accounts found. Please connect your wallet.");
       }
 
-      const fee = (await contract.methods.getBattleDetails(Number(battleId)).call()) as {
+      const fee = (await contract.methods
+        .getBattleDetails(Number(battleId))
+        .call()) as {
         fee: string;
       };
       await contract.methods.vote(Number(battleId), songIndex + 1).send({
@@ -87,28 +94,55 @@ const BattleDetailsPage = () => {
     }
   };
 
-  if (loading) return <p>Loading battle details...</p>;
-  if (error) return <p>{error}</p>;
+  if (loading)
+    return (
+      <div className="flex justify-center items-center h-screen bg-black">
+        <div className="min-h-screen bg-[#1e1f1e] w-96 relative">
+          <Navbar />
+          <h1 className="text-white text-center mt-4 bold text-2xl">
+            Loading Battle Details...
+          </h1>
+          <Bottombar />
+        </div>
+      </div>
+    );
+
+  if (error)
+    return (
+      <div className="flex justify-center items-center h-screen bg-black">
+        <div className="min-h-screen bg-[#1e1f1e] w-96 relative">
+          <Navbar />
+          <h1 className="text-white text-center mt-4 bold text-2xl">{error}</h1>
+          <Bottombar />
+        </div>
+      </div>
+    );
 
   return (
-    <div className="flex overflow-y-auto justify-center items-center h-screen bg-black">
+    <div className="flex justify-center items-center h-screen bg-black">
       <div className="min-h-screen bg-[#1e1f1e] w-96 relative">
         <Navbar />
-        <h1 className="text-white text-center mt-4 bold text-2xl">{battleDetails?.title}</h1>
-        <p className="text-white text-center">{battleDetails?.description}</p>
-        <section>
-          <h2 className="text-white text-lg font-bold">Songs</h2>
+        <h1 className="text-white text-center mt-10 text-3xl font-bold">
+          {battleDetails?.title}
+        </h1>
+        <p className="text-gray-300 text-center mt-2">
+          {battleDetails?.description}
+        </p>
+        <section className="mt-8">
           {battleDetails?.songs.map((song, index) => (
-            <div key={index} className="text-white my-4">
-              <p>
-                {song} by {battleDetails?.artists[index]}
-              </p>
-              <button
-                onClick={() => handleVote(index)}
-                className="bg-blue-500 text-white px-4 py-2 mt-2 rounded"
-              >
-                Vote
-              </button>
+            <div
+              key={index}
+              className=" flex flex-col items-center justify-center w-full"
+            >
+              <div className="  mb-6 p-4 border  w-72 border-gray-700 rounded bg-[#282828] hover:bg-[#3b3b3b] transition-all duration-300 shadow-md">
+                <p className="text-lg font-medium text-gray-200">{song}</p>
+                <button
+                  onClick={() => handleVote(index)}
+                  className="mt-3 w-full bg-[#6b6a6a] text-white py-2 rounded font-semibold hover:bg-[#969696] transition-all duration-300 shadow-lg"
+                >
+                  Vote
+                </button>
+              </div>
             </div>
           ))}
         </section>

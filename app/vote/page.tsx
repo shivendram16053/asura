@@ -3,7 +3,7 @@ import React from 'react'
 
 const vote = () => {
   return (
-    <div className='flex overflow-y-auto justify-center items-center h-screen bg-black'>
+    <div className='flex justify-center items-center h-screen bg-black'>
       <VotePage/>
     </div>
   )

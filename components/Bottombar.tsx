@@ -11,7 +11,7 @@ const Bottombar = () => {
   }
 
   return (
-    <div className="fixed  bottom-0 h-16 bg-stone-800 text-white flex items-center justify-evenly w-96">
+    <div className="fixed bottom-0 h-16 bg-stone-800 text-white flex items-center justify-evenly w-96">
       <Link href="/create">
       <button className="flex flex-col items-center">
         <ClipboardList className="h-6 w-6" />

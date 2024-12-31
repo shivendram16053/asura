@@ -173,7 +173,7 @@ const CreateBattle = () => {
                       onClick={() => handleMusicSelect(index, song)}
                       className="cursor-pointer p-2 hover:bg-slate-300"
                     >
-                      {song.name} by {song.artists[0]?.name}
+                      {song.name}
                     </li>
                   ))}
                 </ul>

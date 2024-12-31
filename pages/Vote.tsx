@@ -23,7 +23,6 @@ const VotePage: React.FC = () => {
   const { isConnected } = useWallet();
   const router = useRouter();
   const [activeBattles, setActiveBattles] = useState<Battle[]>([]);
-  const [endedBattles, setEndedBattles] = useState<Battle[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
@@ -38,8 +37,10 @@ const VotePage: React.FC = () => {
         const web3 = getWeb3();
         const contract = getContract(web3);
 
-        const activeBattleIds = (await contract.methods.getActiveBattles().call()) || [];
-        const endedBattleIds = (await contract.methods.getEndedBattles().call()) || [];
+        const activeBattleIds =
+          (await contract.methods.getActiveBattles().call()) || [];
+        const endedBattleIds =
+          (await contract.methods.getEndedBattles().call()) || [];
         const activeBattlePromises = activeBattleIds.map((id: number) =>
           contract.methods.getBattleDetails(id).call()
         );
@@ -62,18 +63,6 @@ const VotePage: React.FC = () => {
           }))
         );
 
-        setEndedBattles(
-          endedBattlesData.map((battle: any, index: number) => ({
-            id: endedBattleIds[index],
-            title: battle.title,
-            description: battle.description,
-            songs: battle.songs,
-            artists: battle.artists,
-            endTime: parseInt(battle.endTime),
-            voteCount: battle.voteCount,
-          }))
-        );
-
         setLoading(false);
       } catch (error) {
         console.error("Error fetching battles:", error);
@@ -84,29 +73,36 @@ const VotePage: React.FC = () => {
     fetchBattles();
   }, []);
 
-  if (loading) return <p>Loading battles...</p>;
+  if (loading)
+    return (
+      <div className="min-h-screen bg-[#1e1f1e] w-96 relative">
+        <Navbar />
+        <h1 className="text-white text-center mt-4 bold text-2xl">
+          Loading Battles...
+        </h1>
+        <Bottombar />
+      </div>
+    );
 
   return (
     <div className="min-h-screen bg-[#1e1f1e] w-96 relative">
-      <Navbar />
-      <h1 className="text-white text-center mt-4 bold text-2xl">Vote For Battles</h1>
-      <section>
-        <h2>Active Battles</h2>
-        {activeBattles.map((battle) => (
-          <Link key={battle.id} href={`/vote/${battle.id}`}>
-            
-              <BattleCard {...battle} isEnded={false} />
-            
-          </Link>
-        ))}
-      </section>
-      <section>
-        <h2>Ended Battles</h2>
-        {endedBattles.map((battle) => (
-          <BattleCard key={battle.id} {...battle} isEnded={true} />
-        ))}
-      </section>
-      <Bottombar />
+      <div className=" h-screen scrollbar-hide overflow-y-auto">
+        <Navbar />
+        <div className="">
+          <h1 className="text-white text-center mt-4 bold text-2xl">
+            Vote For Battles
+          </h1>
+          <section>
+            {activeBattles.map((battle) => (
+              <Link key={`${battle.id}`} href={`/vote/${battle.id}`}>
+                <BattleCard {...battle} />
+              </Link>
+            ))}
+          </section>
+
+          <Bottombar />
+        </div>
+      </div>
     </div>
   );
 };
