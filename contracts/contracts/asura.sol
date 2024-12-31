@@ -19,6 +19,8 @@ contract Asura {
     }
 
     mapping(uint256 => Battle) public battles;
+    mapping(uint256 => mapping(address => bool)) public hasVoted; // Track if a user has voted in a battle
+    mapping(address => uint256[]) public userWins; // Track the battles the user won
     uint256 public battleCount;
 
     // Events
@@ -57,10 +59,14 @@ contract Asura {
         require(block.timestamp < battle.endTime, "Battle has ended");
         require(_songChoice == 1 || _songChoice == 2, "Invalid song choice");
         require(msg.value == battle.fee, "Incorrect fee sent");
+        require(!hasVoted[_battleId][msg.sender], "You have already voted in this battle");
 
         battle.voters.push(msg.sender);
         battle.voteCount[_songChoice - 1]++;
         battle.prizePool += msg.value;
+
+        // Mark the user as voted
+        hasVoted[_battleId][msg.sender] = true;
 
         emit Voted(_battleId, msg.sender, _songChoice);
     }
@@ -80,6 +86,13 @@ contract Asura {
         }
 
         battle.winnerDeclared = true;
+
+        // Track the users who voted for the winning song
+        for (uint256 i = 0; i < battle.voters.length; i++) {
+            if (battle.voteCount[battle.winningSide - 1] > 0) {
+                userWins[battle.voters[i]].push(_battleId); // Add to user's win list if they voted for the winning song
+            }
+        }
 
         emit WinnerDeclared(_battleId, battle.winningSide);
     }
@@ -159,5 +172,24 @@ contract Asura {
             battle.prizePool,
             battle.winnerDeclared
         );
+    }
+
+    // Fetch the battles the user has voted in
+    function getVotedBattles(address _user) external view returns (uint256[] memory) {
+        uint256[] memory votedBattles = new uint256[](battleCount);
+        uint256 count = 0;
+
+        for (uint256 i = 0; i < battleCount; i++) {
+            if (hasVoted[i][_user]) {
+                votedBattles[count] = i;
+                count++;
+            }
+        }
+
+        return votedBattles;
+    }
+
+    function getUserWins(address _user) external view returns (uint256[] memory) {
+        return userWins[_user];
     }
 }

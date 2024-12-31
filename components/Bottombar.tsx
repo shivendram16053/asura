@@ -24,14 +24,18 @@ const Bottombar = () => {
         <span className="text-xs">Vote</span>
       </button>
       </Link>
+      <Link href={"/claim"}>
       <button className="flex flex-col items-center">
         <PieChart className="h-6 w-6" />
-        <span className="text-xs">Leaderboard</span>
+        <span className="text-xs">Rewards</span>
       </button>
+      </Link>
+      <Link href={"/profile"}>
       <button className="flex flex-col items-center">
         <User className="h-6 w-6" />
         <span className="text-xs">Profile</span>
       </button>
+      </Link>
     </div>
   );
 };

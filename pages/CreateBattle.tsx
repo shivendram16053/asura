@@ -91,7 +91,7 @@ const CreateBattle = () => {
       const signer = provider.getSigner();
   
       const contract = new ethers.Contract(
-        "0x9c1321d4D075B966A0b95404E15c8DE0d6e6aA29",
+        "0x2014bFBBA77e1F8C97ca33021DdDb9Bd49289fcC",
         battleContractABI.abi,
         signer
       );
@@ -173,7 +173,7 @@ const CreateBattle = () => {
                       onClick={() => handleMusicSelect(index, song)}
                       className="cursor-pointer p-2 hover:bg-slate-300"
                     >
-                      {song.name}
+                      {song.name} by {song.artists[0]?.name}
                     </li>
                   ))}
                 </ul>
