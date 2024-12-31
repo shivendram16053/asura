@@ -1,6 +1,6 @@
 import Web3 from "web3";
 import { AbiItem } from "web3-utils";
-import contractABI from "../contracts/artifacts/contracts/asura.sol/Asura.json";
+import contractABI from "./abi.json";
 
 const CONTRACT_ADDRESS = "0x2014bFBBA77e1F8C97ca33021DdDb9Bd49289fcC";
 

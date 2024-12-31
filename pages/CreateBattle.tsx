@@ -6,7 +6,7 @@ import { useWallet } from "@/context/useWallet";
 import { ethers } from "ethers";
 import { useRouter } from "next/navigation";
 import React, { useEffect, useState } from "react";
-import battleContractABI from "../contracts/artifacts/contracts/asura.sol/Asura.json";
+import battleContractABI from "../utils/abi.json";
 
 // Song type definition
 interface Song {
