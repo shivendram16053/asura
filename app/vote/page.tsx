@@ -86,15 +86,15 @@ const vote = () => {
       </div>
     );
   return (
-    <div className="bg-black">
+    <div className="fixed inset-0 bg-black">
       <div className="min-h-screen scrollbar-hide bg-[#1e1f1e] w-96 relative mx-auto overflow-y-scroll">
           <Navbar />
           <div className="h-screen">
             <h1 className="text-white text-center mt-4 bold text-2xl">
               Vote For Battles
             </h1>
-            <section className="mb-50">
-              {activeBattles.map((battle) => (
+            <section className="mt-4 overflow-y-auto scrollbar-hide max-h-[600px]">
+            {activeBattles.map((battle) => (
                 <Link key={`${battle.id}`} href={`/vote/${battle.id}`}>
                   <BattleCard {...battle} />
                 </Link>

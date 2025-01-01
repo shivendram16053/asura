@@ -37,54 +37,59 @@ const page = () => {
     if (!isConnected || !address) {
       router.push("/"); // Redirect to home if not connected
     }
-  }, [isConnected, router]);
+  }, [isConnected, address, router]);
 
   useEffect(() => {
     const fetchVotedBattles = async () => {
       try {
         const web3 = getWeb3();
         const contract = getContract(web3);
-
+    
         const userVotedBattles: number[] =
           (await contract.methods.getVotedBattles(address).call()) || [];
-
-        if (!Array.isArray(userVotedBattles)) {
-          console.error(
-            "Unexpected return type for getVotedBattles:",
-            userVotedBattles
-          );
+    
+        const uniqueBattleIds = Array.from(new Set(userVotedBattles));
+    
+        if (uniqueBattleIds.length === 0) {
+          console.warn("No battles found:", uniqueBattleIds);
           setVotedBattles([]);
           setLoading(false);
           return;
         }
-
+    
+        // Fetch battle details for valid IDs
         const battles = await Promise.all(
-          userVotedBattles.map(async (battleId: number) => {
-            const battleDetails: BattleDetails = await contract.methods
-              .getBattleDetails(battleId)
-              .call();
-            if (!battleDetails) {
-              throw new Error(`No details found for battle ID: ${battleId}`);
+          uniqueBattleIds.map(async (battleId) => {
+            try {
+              const battleDetails: BattleDetails = await contract.methods
+                .getBattleDetails(battleId)
+                .call();
+    
+              return {
+                id: battleId,
+                title: battleDetails.title,
+                description: battleDetails.description,
+                songs: battleDetails.songs,
+                artists: battleDetails.artists,
+                endTime: battleDetails.endTime,
+                voteCount: battleDetails.voteCount,
+              };
+            } catch (error) {
+              console.warn(`Failed to fetch details for battle ID ${battleId}:`, error);
+              return null; // Ignore invalid battle IDs
             }
-            return {
-              id: battleId,
-              title: battleDetails.title,
-              description: battleDetails.description,
-              songs: battleDetails.songs,
-              artists: battleDetails.artists,
-              endTime: battleDetails.endTime,
-              voteCount: battleDetails.voteCount,
-            };
           })
         );
-
-        setVotedBattles(battles);
+    
+        // Filter out null responses
+        setVotedBattles(battles.filter((battle) => battle !== null));
       } catch (error) {
         console.error("Error fetching voted battles:", error);
       } finally {
         setLoading(false);
       }
     };
+    
 
     fetchVotedBattles();
   }, [isConnected, address]);
@@ -109,11 +114,11 @@ const page = () => {
   }
 
   return (
-    <div className="bg-black">
+    <div className="fixed inset-0 bg-black">
       <div className="min-h-screen scrollbar-hide bg-[#1e1f1e] w-96 relative mx-auto overflow-y-scroll">
         <Navbar />
-        <div className="h-screen mb-40">
-          <div className="p-4 rounded-lg">
+        <div className="h-screen mb-40 p-4">
+          <div className="rounded-lg">
             <div className="flex items-center justify-between">
               <img
                 src={`/profile.webp`}
@@ -150,13 +155,13 @@ const page = () => {
           <h2 className="text-white text-2xl text-center mt-4">
             Battles You've Voted In
           </h2>
-          <div className="mt-4 ">
+          <div className="mt-4 overflow-y-auto scrollbar-hide max-h-[450px]">
             {votedBattles.length === 0 ? (
               <p className="text-white text-center">No battles found</p>
             ) : (
               votedBattles.map((battle) => (
                 <Link key={battle.id} href={`/vote/${battle.id}`}>
-                  <div className="text-white rounded-lg p-6 m-4 border border-slate-200 transition-transform transform  shadow-md  hover:shadow-slate-500">
+                  <div className="text-white rounded-lg p-6 m-4 border border-slate-200 transition-transform transform shadow-md hover:shadow-slate-500">
                     <h3 className="text-xl font-bold text-white">
                       {battle.title}
                     </h3>

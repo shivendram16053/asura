@@ -136,15 +136,15 @@ const page = () => {
   }
 
   return (
-    <div className="bg-black">
+    <div className=" fixed inset-0bg-black">
       <div className="min-h-screen scrollbar-hide bg-[#1e1f1e] w-96 relative mx-auto overflow-y-scroll">
         <Navbar />
         <div className="h-screen">
           <h1 className="text-white text-center mt-4 bold text-2xl">
             Claim Your Rewards
           </h1>
-          <section>
-            {claimableRewards.length === 0 ? (
+          <section className="mt-4 overflow-y-auto scrollbar-hide max-h-[600px]">
+             {claimableRewards.length === 0 ? (
               <p className="text-white text-center mt-4">
                 No rewards available to claim.
               </p>
