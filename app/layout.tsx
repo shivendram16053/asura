@@ -44,6 +44,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      <script src="https://telgram.org/js/telegram-web-app.js"></script>
       <body className={`${raleway.variable} antialiased`}>
         <WagmiProvider config={config}>
           <QueryClientProvider client={queryClient}>

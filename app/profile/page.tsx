@@ -35,7 +35,7 @@ const page = () => {
 
   useEffect(() => {
     if (!isConnected || !address) {
-      router.push("/"); // Redirect to home if not connected
+      router.push("/");
     }
   }, [isConnected, address, router]);
 
@@ -57,7 +57,6 @@ const page = () => {
           return;
         }
     
-        // Fetch battle details for valid IDs
         const battles = await Promise.all(
           uniqueBattleIds.map(async (battleId) => {
             try {
@@ -76,12 +75,12 @@ const page = () => {
               };
             } catch (error) {
               console.warn(`Failed to fetch details for battle ID ${battleId}:`, error);
-              return null; // Ignore invalid battle IDs
+              return null; 
             }
           })
         );
     
-        // Filter out null responses
+        
         setVotedBattles(battles.filter((battle) => battle !== null));
       } catch (error) {
         console.error("Error fetching voted battles:", error);
