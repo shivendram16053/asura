@@ -13,6 +13,7 @@
     "@prisma/client": "^6.1.0",
     "@radix-ui/react-slot": "^1.1.1",
     "@tanstack/react-query": "^5.62.10",
+    "@uxuycom/web3-tg-sdk": "^0.2.0",
     "axios": "^1.7.9",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",

@@ -1,7 +1,9 @@
-'use client';
+"use client";
 
-import { useAccount, useConnect, useDisconnect } from 'wagmi';
-import { useState } from 'react';
+import { useState } from "react";
+import { WalletTgSdk } from "@uxuycom/web3-tg-sdk";
+
+const { ethereum } = new WalletTgSdk();
 
 interface WalletHook {
   address: string | undefined;
@@ -12,87 +14,79 @@ interface WalletHook {
 }
 
 export const useWallet = (): WalletHook => {
+  const [address, setAddress] = useState<string | undefined>(undefined);
+  const [chainId, setChainId] = useState<string | null>(null);
   const [error, setError] = useState<Error | null>(null);
-  const { address, isConnected } = useAccount();
-  const { connectAsync, connectors } = useConnect();
-  const { disconnect } = useDisconnect();
-
-  const switchToBscTestnet = async () => {
-    if (typeof window.ethereum !== 'undefined') {
-      try {
-        // Attempt to switch to the BSC Testnet
-        await window.ethereum.request({
-          method: 'wallet_switchEthereumChain',
-          params: [{ chainId: '0x61' }], // BSC Testnet chain ID
-        });
-        console.log('Successfully switched to BSC Testnet');
-      } catch (switchError: any) {
-        console.error('Error while switching network:', switchError);
-        // Handle the case where the network is not added to the wallet
-        if (switchError.code === 4902) {
-          try {
-            await window.ethereum.request({
-              method: 'wallet_addEthereumChain',
-              params: [
-                {
-                  chainId: '0x61',
-                  chainName: 'Binance Smart Chain Testnet',
-                  rpcUrls: ['https://data-seed-prebsc-1-s1.binance.org:8545'],
-                  nativeCurrency: {
-                    name: 'Binance Coin',
-                    symbol: 'BNB',
-                    decimals: 18,
-                  },
-                  blockExplorerUrls: ['https://testnet.bscscan.com'],
-                },
-              ],
-            });
-            console.log('BSC Testnet successfully added and switched');
-          } catch (addError) {
-            console.error('Failed to add BSC Testnet:', addError);
-            setError(
-              addError instanceof Error ? addError : new Error('Failed to add network')
-            );
-          }
-        } else {
-          setError(
-            switchError instanceof Error ? switchError : new Error('Failed to switch network')
-          );
-        }
-      }
-    } else {
-      const errMsg = 'MetaMask or any compatible wallet is not installed.';
-      console.error(errMsg);
-      setError(new Error(errMsg));
-    }
-  };
+  const [isConnected, setIsConnected] = useState(false);
 
   const connect = async () => {
     try {
       setError(null);
-      const connector = connectors[0];
-      if (connector) {
-        await connectAsync({ connector });
-        await switchToBscTestnet(); // Automatically switch to BSC Testnet after connecting
+      const accounts = await ethereum.request({
+        method: "eth_requestAccounts",
+      });
+      if (accounts && accounts.length > 0) {
+        setAddress(accounts[0]);
+        setIsConnected(true);
+
+        const currentChainId = await ethereum.request({
+          method: "eth_chainId",
+        });
+        setChainId(currentChainId);
+
+        if (currentChainId !== "0x61") {
+          await ethereum.request({
+            method: "wallet_switchEthereumChain",
+            params: [{ chainId: "0x61" }],
+          });
+        }
       } else {
-        setError(new Error('No wallet connector found'));
+        setError(new Error("No accounts found"));
       }
     } catch (err) {
-      console.error('Error during wallet connection:', err);
-      setError(err instanceof Error ? err : new Error('Failed to connect wallet'));
+      console.error("Error during wallet connection:", err);
+      setError(
+        err instanceof Error ? err : new Error("Failed to connect wallet")
+      );
     }
   };
 
+  // Disconnect the wallet
   const disconnectFunc = async () => {
     try {
-      await disconnect(); // Ensures wallet disconnection
+      setAddress(undefined);
+      setChainId(null);
+      setIsConnected(false);
       setError(null);
-      localStorage.removeItem('wagmi.wallet'); // Clears the wallet cache
+      localStorage.removeItem("wagmi.wallet"); // Clears the wallet cache
+      console.log("Disconnected from wallet");
     } catch (err) {
-      console.error('Disconnect error:', err);
-      setError(err instanceof Error ? err : new Error('Failed to disconnect wallet'));
+      console.error("Disconnect error:", err);
+      setError(
+        err instanceof Error ? err : new Error("Failed to disconnect wallet")
+      );
     }
   };
+
+  // Set up event listeners for account and chain changes
+  const setupListeners = () => {
+    if (ethereum) {
+      ethereum.removeAllListeners();
+      ethereum.on("accountsChanged", (accounts) => {
+        setAddress(accounts[0]);
+        console.log("Active account changed:", accounts[0]);
+      });
+      ethereum.on("chainChanged", (changedChainId) => {
+        setChainId(changedChainId);
+        console.log("Network changed to:", changedChainId);
+      });
+    }
+  };
+
+  // Call the setupListeners once when the component is mounted
+  if (isConnected) {
+    setupListeners();
+  }
 
   return {
     address,
