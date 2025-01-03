@@ -28,7 +28,7 @@ interface BattleDetails {
 }
 
 const page = () => {
-  const { isConnected, address, disconnectFunc } = useWallet();
+  const { isConnected, address, disconnect } = useWallet();
   const router = useRouter();
   const [votedBattles, setVotedBattles] = useState<Battle[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -94,7 +94,7 @@ const page = () => {
   }, [isConnected, address]);
 
   const handledisconnectFunc = () => {
-    disconnectFunc();
+    disconnect();
     router.push("/"); // Redirect to home after disconnectFunc
   };
 

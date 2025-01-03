@@ -13,7 +13,7 @@ const pacifico = Pacifico({
 });
 
 const Navbar = () => {
-  const { address, connect, disconnectFunc } = useWallet();
+  const { address, connect, disconnect } = useWallet();
   const [showDialog, setShowDialog] = useState(false);
 
   const copyAddressToClipboard = () => {
@@ -25,7 +25,7 @@ const Navbar = () => {
 
   const handleDisconnect = async () => {
     try {
-      await disconnectFunc();
+      await disconnect();
       setShowDialog(false);
       console.log("Disconnected successfully.");
     } catch (err) {
