@@ -8,6 +8,7 @@ import { http, createConfig } from "wagmi";
 import { bsc } from "wagmi/chains";
 import { injected, metaMask, walletConnect } from "wagmi/connectors";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { WalletProvider } from "@/context/useWallet";
 const WagmiProvider = dynamic(
   () => import("wagmi").then((mod) => mod.WagmiProvider),
   { ssr: false }
@@ -53,7 +54,9 @@ export default function RootLayout({
       <body className={`${raleway.variable} antialiased`}>
         <WagmiProvider config={config}>
           <QueryClientProvider client={queryClient}>
+            <WalletProvider>
             {children}
+            </WalletProvider>
           </QueryClientProvider>
         </WagmiProvider>
       </body>

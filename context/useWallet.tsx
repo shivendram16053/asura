@@ -1,37 +1,32 @@
-"use client";
-
-import { useState } from "react";
+// WalletContext.tsx
+import React, { createContext, useContext, useState, useEffect } from "react";
 import { WalletTgSdk } from "@uxuycom/web3-tg-sdk";
 
 const { ethereum } = new WalletTgSdk();
 
-interface WalletHook {
+interface WalletContextProps {
   address: string | undefined;
+  chainId: string | null;
   isConnected: boolean;
   connect: () => void;
-  disconnectFunc: () => void;
-  error: Error | null;
+  disconnect: () => void;
 }
 
-export const useWallet = (): WalletHook => {
+const WalletContext = createContext<WalletContextProps | undefined>(undefined);
+
+export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [address, setAddress] = useState<string | undefined>(undefined);
   const [chainId, setChainId] = useState<string | null>(null);
-  const [error, setError] = useState<Error | null>(null);
   const [isConnected, setIsConnected] = useState(false);
 
   const connect = async () => {
     try {
-      setError(null);
-      const accounts = await ethereum.request({
-        method: "eth_requestAccounts",
-      });
+      const accounts = await ethereum.request({ method: "eth_requestAccounts" });
       if (accounts && accounts.length > 0) {
         setAddress(accounts[0]);
         setIsConnected(true);
 
-        const currentChainId = await ethereum.request({
-          method: "eth_chainId",
-        });
+        const currentChainId = await ethereum.request({ method: "eth_chainId" });
         setChainId(currentChainId);
 
         if (currentChainId !== "0x61") {
@@ -40,59 +35,51 @@ export const useWallet = (): WalletHook => {
             params: [{ chainId: "0x61" }],
           });
         }
-      } else {
-        setError(new Error("No accounts found"));
       }
-    } catch (err) {
-      console.error("Error during wallet connection:", err);
-      setError(
-        err instanceof Error ? err : new Error("Failed to connect wallet")
-      );
+    } catch (error) {
+      console.error("Error connecting wallet:", error);
     }
   };
 
-  // Disconnect the wallet
-  const disconnectFunc = async () => {
-    try {
-      setAddress(undefined);
-      setChainId(null);
-      setIsConnected(false);
-      setError(null);
-      localStorage.removeItem("wagmi.wallet"); // Clears the wallet cache
-      console.log("Disconnected from wallet");
-    } catch (err) {
-      console.error("Disconnect error:", err);
-      setError(
-        err instanceof Error ? err : new Error("Failed to disconnect wallet")
-      );
-    }
+  const disconnect = () => {
+    setAddress(undefined);
+    setChainId(null);
+    setIsConnected(false);
+    localStorage.removeItem("wagmi.wallet");
   };
 
-  // Set up event listeners for account and chain changes
-  const setupListeners = () => {
-    if (ethereum) {
-      ethereum.removeAllListeners();
+  useEffect(() => {
+    const setupListeners = () => {
       ethereum.on("accountsChanged", (accounts) => {
-        setAddress(accounts[0]);
-        console.log("Active account changed:", accounts[0]);
+        if (accounts.length === 0) {
+          disconnect();
+        } else {
+          setAddress(accounts[0]);
+        }
       });
+
       ethereum.on("chainChanged", (changedChainId) => {
         setChainId(changedChainId);
-        console.log("Network changed to:", changedChainId);
       });
-    }
-  };
+    };
 
-  // Call the setupListeners once when the component is mounted
-  if (isConnected) {
     setupListeners();
-  }
+    return () => {
+      ethereum.removeAllListeners();
+    };
+  }, []);
 
-  return {
-    address,
-    isConnected,
-    connect,
-    disconnectFunc,
-    error,
-  };
+  return (
+    <WalletContext.Provider value={{ address, chainId, isConnected, connect, disconnect }}>
+      {children}
+    </WalletContext.Provider>
+  );
+};
+
+export const useWallet = () => {
+  const context = useContext(WalletContext);
+  if (!context) {
+    throw new Error("useWallet must be used within a WalletProvider");
+  }
+  return context;
 };
