@@ -1,8 +1,5 @@
-// WalletContext.tsx
+"use client";
 import React, { createContext, useContext, useState, useEffect } from "react";
-import { WalletTgSdk } from "@uxuycom/web3-tg-sdk";
-
-const { ethereum } = new WalletTgSdk();
 
 interface WalletContextProps {
   address: string | undefined;
@@ -10,6 +7,7 @@ interface WalletContextProps {
   isConnected: boolean;
   connect: () => void;
   disconnect: () => void;
+  ethereum: any;
 }
 
 const WalletContext = createContext<WalletContextProps | undefined>(undefined);
@@ -18,8 +16,38 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [address, setAddress] = useState<string | undefined>(undefined);
   const [chainId, setChainId] = useState<string | null>(null);
   const [isConnected, setIsConnected] = useState(false);
+  const [ethereum, setEthereum] = useState<any>(null);
+  const [isClient, setIsClient] = useState(false);
+
+  // Check if we're on the client side
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
+  // Initialize SDK only on client side
+  useEffect(() => {
+    if (!isClient) return;
+
+    const initializeSDK = async () => {
+      try {
+        // Dynamically import the SDK
+        const { WalletTgSdk } = await import('@uxuycom/web3-tg-sdk');
+        const { ethereum: eth } = new WalletTgSdk();
+        setEthereum(eth);
+      } catch (error) {
+        console.error("Failed to initialize wallet SDK:", error);
+      }
+    };
+
+    initializeSDK();
+  }, [isClient]);
 
   const connect = async () => {
+    if (!ethereum) {
+      console.error("Wallet SDK not initialized");
+      return;
+    }
+
     try {
       const accounts = await ethereum.request({ method: "eth_requestAccounts" });
       if (accounts && accounts.length > 0) {
@@ -49,28 +77,45 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   };
 
   useEffect(() => {
-    const setupListeners = () => {
-      ethereum.on("accountsChanged", (accounts) => {
-        if (accounts.length === 0) {
-          disconnect();
-        } else {
-          setAddress(accounts[0]);
-        }
-      });
+    if (!ethereum || !isClient) return;
 
-      ethereum.on("chainChanged", (changedChainId) => {
-        setChainId(changedChainId);
-      });
+    const onAccountsChanged = (accounts: string[]) => {
+      if (accounts.length === 0) {
+        disconnect();
+      } else {
+        setAddress(accounts[0]);
+      }
     };
 
-    setupListeners();
+    const onChainChanged = (changedChainId: string) => {
+      setChainId(changedChainId);
+    };
+
+    ethereum.on("accountsChanged", onAccountsChanged);
+    ethereum.on("chainChanged", onChainChanged);
+
     return () => {
-      ethereum.removeAllListeners();
+      if (ethereum && ethereum.removeListener) {
+        ethereum.removeListener("accountsChanged", onAccountsChanged);
+        ethereum.removeListener("chainChanged", onChainChanged);
+      }
     };
-  }, []);
+  }, [ethereum, isClient]);
+
+  // Show nothing until we're on the client side
+  if (!isClient) {
+    return null;
+  }
 
   return (
-    <WalletContext.Provider value={{ address, chainId, isConnected, connect, disconnect }}>
+    <WalletContext.Provider value={{ 
+      address, 
+      chainId, 
+      isConnected, 
+      connect, 
+      disconnect, 
+      ethereum 
+    }}>
       {children}
     </WalletContext.Provider>
   );

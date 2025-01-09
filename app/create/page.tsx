@@ -13,8 +13,8 @@ interface Song {
   artists: Array<{ name: string }>;
 }
 
-const create = () => {
-  const { isConnected } = useWallet();
+const Create = () => {
+  const { isConnected, connect, ethereum } = useWallet();
   const router = useRouter();
   const [battleTitle, setBattleTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -27,8 +27,6 @@ const create = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [shareableLink, setShareableLink] = useState<string | null>(null);
 
-  
-
   useEffect(() => {
     if (!isConnected) {
       router.push("/");
@@ -36,7 +34,13 @@ const create = () => {
   }, [isConnected, router]);
 
   if (!isConnected) {
-    return null;
+    return (
+      <div>
+        <button onClick={connect} className="bg-white text-black px-6 py-2 rounded">
+          Connect Wallet
+        </button>
+      </div>
+    );
   }
 
   // Fetch song suggestions from the backend or music API
@@ -74,20 +78,19 @@ const create = () => {
     setSuggestions([]);
     setActiveInput(null);
   };
-  
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
       setIsSubmitting(true);
   
-      if (!window.ethereum) {
-        throw new Error("Please install MetaMask!");
+      if (!isConnected || !ethereum) {
+        throw new Error('Wallet not connected');
       }
   
-      const provider = new ethers.providers.Web3Provider(window.ethereum as any);
+      const provider = new ethers.providers.Web3Provider(ethereum);
       const signer = provider.getSigner();
-  
+      
       const contract = new ethers.Contract(
         "0x2014bFBBA77e1F8C97ca33021DdDb9Bd49289fcC",
         battleContractABI.abi,
@@ -97,125 +100,141 @@ const create = () => {
       // Convert fees from BNB to Wei
       const feesInWei = ethers.utils.parseEther(fees.toString());
   
-      const tx = await contract.createBattle(battleTitle, description, songs, artists, feesInWei);
-      const receipt = await tx.wait();
+      // Convert songs and artists arrays to fixed-size arrays of 2 elements
+      const songsArray: [string, string] = [songs[0], songs[1]];
+      const artistsArray: [string, string] = [artists[0], artists[1]];
   
+      // Create battle without sending value
+      const tx = await contract.createBattle(
+        battleTitle,
+        description,
+        songsArray,
+        artistsArray,
+        feesInWei
+      );
+  
+      const receipt = await tx.wait();
       console.log("Transaction confirmed:", receipt);
   
-      const battleId = receipt.events[0].args[0].toNumber();
+      // Get battle ID from the BattleCreated event
+      const event = receipt.events?.find((e: { event: string; }) => e.event === 'BattleCreated');
+      if (event) {
+        const battleId = event.args?.battleId.toNumber();
+        const shareableLink = `t.me/a_Sura_bot/aSura/battle/${battleId}`;
+        setShareableLink(shareableLink);
+      }
   
-      const shareableLink = `https://asura-app.vercel.app/battle/${battleId}`;
-      setShareableLink(shareableLink);
     } catch (error) {
       console.error("Error creating battle on-chain:", error);
     } finally {
       setIsSubmitting(false);
     }
   };
-
-
+  
   return (
-    <div className='flex justify-center items-center h-screen bg-black'>
+    <div className="flex justify-center items-center h-screen bg-black">
       <div className="min-h-screen bg-[#1e1f1e] w-96 relative">
-      <Navbar />
-      <h1 className="text-white text-center mt-4 text-2xl">Create Battle</h1>
-      <form onSubmit={handleSubmit} className="p-4 space-y-4">
-        {/* Battle Title */}
-        <div>
-          <label htmlFor="title" className="block text-white mb-2">
-            Battle Title
-          </label>
-          <input
-            id="title"
-            type="text"
-            value={battleTitle}
-            onChange={(e) => setBattleTitle(e.target.value)}
-            className="w-full px-4 py-2 rounded bg-black outline-none shadow-sm shadow-white text-white"
-            placeholder="Enter battle title"
-            required
-          />
-        </div>
+        <Navbar />
+        <h1 className="text-white text-center mt-4 text-2xl">Create Battle</h1>
+        <form onSubmit={handleSubmit} className="p-4 space-y-4">
+          {/* Battle Title */}
+          <div>
+            <label htmlFor="title" className="block text-white mb-2">
+              Battle Title
+            </label>
+            <input
+              id="title"
+              type="text"
+              value={battleTitle}
+              onChange={(e) => setBattleTitle(e.target.value)}
+              className="w-full px-4 py-2 rounded bg-black outline-none shadow-sm shadow-white text-white"
+              placeholder="Enter battle title"
+              required
+            />
+          </div>
 
-        {/* Description */}
-        <div>
-          <label htmlFor="description" className="block text-white mb-2">
-            Description
-          </label>
-          <textarea
-            id="description"
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            className="w-full px-4 py-2 rounded bg-black outline-none shadow-sm shadow-white text-white"
-            placeholder="Enter a brief description"
-            required
-          />
-        </div>
+          {/* Description */}
+          <div>
+            <label htmlFor="description" className="block text-white mb-2">
+              Description
+            </label>
+            <textarea
+              id="description"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              className="w-full px-4 py-2 rounded bg-black outline-none shadow-sm shadow-white text-white"
+              placeholder="Enter a brief description"
+              required
+            />
+          </div>
 
-        {/* Fixed Inputs for Songs */}
-        <div>
-          <label className="block text-white mb-2">Select Songs</label>
-          {songs.map((song, index) => (
-            <div key={index} className="mb-4 relative">
-              <input
-                type="text"
-                value={song}
-                onChange={(e) => handleMusicSearch(index, e.target.value)}
-                className="w-full px-4 py-2 rounded bg-black outline-none shadow- shadow-white text-white"
-                placeholder={`Search for song ${index + 1}...`}
-                required
-              />
-              {query && activeInput === index && (
-                <ul className="bg-white rounded mt-2 absolute w-full z-10 max-h-48 overflow-y-auto">
-                  {suggestions.map((song) => (
-                    <li
-                      key={song.id}
-                      onClick={() => handleMusicSelect(index, song)}
-                      className="cursor-pointer p-2 hover:bg-slate-300"
-                    >
-                      {song.name} by {song.artists[0]?.name}
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          ))}
-        </div>
+          {/* Fixed Inputs for Songs */}
+          <div>
+            <label className="block text-white mb-2">Select Songs</label>
+            {songs.map((song, index) => (
+              <div key={index} className="mb-4 relative">
+                <input
+                  type="text"
+                  value={song}
+                  onChange={(e) => handleMusicSearch(index, e.target.value)}
+                  className="w-full px-4 py-2 rounded bg-black outline-none shadow-sm shadow-white text-white"
+                  placeholder={`Search for song ${index + 1}...`}
+                  required
+                />
+                {query && activeInput === index && (
+                  <ul className="bg-white rounded mt-2 absolute w-full z-10 max-h-48 overflow-y-auto">
+                    {suggestions.map((song) => (
+                      <li
+                        key={song.id}
+                        onClick={() => handleMusicSelect(index, song)}
+                        className="cursor-pointer p-2 hover:bg-slate-300"
+                      >
+                        {song.name} by {song.artists[0]?.name}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            ))}
+          </div>
 
-        <div>
-          <label htmlFor="title" className="block text-white mb-2">
-            Fees (In BNB)
-          </label>
-          <input
-            id="fees"
-            type="number"
-            value={fees}
-            onChange={(e) => setFees(Number(e.target.value))}
-            className="w-full px-4 py-2 rounded bg-black outline-none shadow-sm shadow-white text-white"
-            placeholder="Set Voting fees"
-            required
-          />
-        </div>
+          <div>
+            <label htmlFor="fees" className="block text-white mb-2">
+              Fees (In BNB)
+            </label>
+            <input
+              id="fees"
+              type="number"
+              value={fees}
+              onChange={(e) => setFees(Number(e.target.value))}
+              className="w-full px-4 py-2 rounded bg-black outline-none shadow-sm shadow-white text-white"
+              placeholder="Set Voting fees"
+              required
+            />
+          </div>
 
-        {/* Submit Button */}
-        <div className="text-center">
-          <button
-            type="submit"
-            className="bg-white text-black px-6 py-2 rounded hover:bg-slate-300 transition-colors"
-            disabled={isSubmitting}
-          >
-            {isSubmitting ? "Submitting..." : "Create Battle"}
-          </button>
-        </div>
-      </form>
-      {shareableLink && (
-        <div className="text-center text-white mt-4">
-          Shareable Link: <a href={shareableLink}>{shareableLink}</a>
-        </div>
-      )}
-      <Bottombar />
+          {/* Submit Button */}
+          <div className="text-center">
+            <button
+              type="submit"
+              className="bg-white text-black px-6 py-2 rounded hover:bg-slate-300 transition-colors"
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? "Submitting..." : "Create Battle"}
+            </button>
+          </div>
+        </form>
+
+        {shareableLink && (
+          <div className="text-center text-white mt-4">
+            Shareable Link: <a href={shareableLink}>{shareableLink}</a>
+          </div>
+        )}
+
+        <Bottombar />
+      </div>
     </div>
-    </div>
-  )
-}
+  );
+};
 
-export default create
+export default Create;

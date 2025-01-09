@@ -4,7 +4,6 @@ import React, { useEffect, useState } from "react";
 import { Button } from "./ui/button";
 import { Pacifico } from "next/font/google";
 import { useWallet } from "@/context/useWallet";
-import { Loader2 } from "lucide-react";
 import Link from "next/link";
 
 const pacifico = Pacifico({
@@ -49,8 +48,6 @@ const Navbar = () => {
       }
     };
 
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [showDialog]);
 
   return (
