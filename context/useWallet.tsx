@@ -32,7 +32,12 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       try {
         // Dynamically import the SDK
         const { WalletTgSdk } = await import('@uxuycom/web3-tg-sdk');
-        const { ethereum: eth } = new WalletTgSdk();
+        const { ethereum: eth } = new WalletTgSdk({
+          metaData: {
+            hostname: 'A-sura',
+            icon: 'https://a-sura.vercel.app/icon.png'
+          }
+        });
         setEthereum(eth);
       } catch (error) {
         console.error("Failed to initialize wallet SDK:", error);
@@ -108,13 +113,13 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   }
 
   return (
-    <WalletContext.Provider value={{ 
-      address, 
-      chainId, 
-      isConnected, 
-      connect, 
-      disconnect, 
-      ethereum 
+    <WalletContext.Provider value={{
+      address,
+      chainId,
+      isConnected,
+      connect,
+      disconnect,
+      ethereum
     }}>
       {children}
     </WalletContext.Provider>
