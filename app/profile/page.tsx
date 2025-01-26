@@ -113,10 +113,11 @@ const page = () => {
   }
 
   return (
-    <div className="fixed inset-0 bg-black">
-      <div className="min-h-screen scrollbar-hide bg-[#1e1f1e] w-96 relative mx-auto overflow-y-scroll">
+    
+    <div className="fixed inset-0 bg-black overflow-y-auto ">
+      <div className="min-h-screen scrollbar-hide bg-[#1e1f1e] w-96 mx-auto ">
         <Navbar />
-        <div className="h-screen mb-40 p-4">
+        <div className="mb-16 overflow-y-scroll scrollbar-hide p-4">
           <div className="rounded-lg">
             <div className="flex items-center justify-between">
               <img

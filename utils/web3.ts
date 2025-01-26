@@ -2,7 +2,7 @@ import Web3 from "web3";
 import { AbiItem } from "web3-utils";
 import contractABI from "./abi.json";
 
-const CONTRACT_ADDRESS = "0x2014bFBBA77e1F8C97ca33021DdDb9Bd49289fcC";
+const CONTRACT_ADDRESS = "0x5E00FDD224753e74B6d40ED1bCB0DE4295693d7F";
 
 export const getWeb3 = () => {
   if (typeof window !== "undefined" && (window as any).ethereum) {

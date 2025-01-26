@@ -76,8 +76,8 @@ const vote = () => {
   if (loading)
     return (
       <div className="bg-black">
-      <div className="min-h-screen scrollbar-hide bg-[#1e1f1e] w-96 relative mx-auto overflow-y-scroll">
-         <Navbar />
+        <div className="min-h-screen scrollbar-hide bg-[#1e1f1e] w-96 relative mx-auto overflow-y-scroll">
+          <Navbar />
           <h1 className="text-white text-center mt-4 bold text-2xl">
             Loading Battles...
           </h1>
@@ -86,25 +86,25 @@ const vote = () => {
       </div>
     );
   return (
-    <div className="fixed inset-0 bg-black">
-      <div className="min-h-screen scrollbar-hide bg-[#1e1f1e] w-96 relative mx-auto overflow-y-scroll">
-          <Navbar />
-          <div className="h-screen">
-            <h1 className="text-white text-center mt-4 bold text-2xl">
-              Vote For Battles
-            </h1>
-            <section className="mt-4 overflow-y-auto scrollbar-hide max-h-[600px]">
+    <div className="fixed inset-0 bg-black overflow-y-auto ">
+      <div className=" min-h-screen scrollbar-hide bg-[#1e1f1e] w-96 mx-auto ">
+        <Navbar />
+        <div className="mb-16 overflow-y-scroll scrollbar-hide">
+          <h1 className="text-white text-center mt-4 bold text-2xl">
+            Vote For Battles
+          </h1>
+          <section className="mt-4 scrollbar-hide">
             {activeBattles.map((battle) => (
-                <Link key={`${battle.id}`} href={`/vote/${battle.id}`}>
-                  <BattleCard {...battle} />
-                </Link>
-              ))}
-            </section>
+              <Link key={`${battle.id}`} href={`/vote/${battle.id}`}>
+                <BattleCard {...battle} />
+              </Link>
+            ))}
+          </section>
 
-            <Bottombar />
-          </div>
+          <Bottombar />
         </div>
       </div>
+    </div>
   );
 };
 
